@@ -337,7 +337,7 @@ LRM.bgen <- function(bgenfile, gIDs,
 check_input_LRM = function(obj.null, Geno.mtx, par.list)
 {
   if(class(obj.null)!="NULL_Model")
-    stop("obj.null should be a returned outcome from SPACox_Null_Model()")
+    stop("obj.null should be a returned outcome from the function SPACox_Null_Model()")
 
   if(is.null(rownames(Geno.mtx))) stop("Row names of 'Geno.mtx' should be given.")
   if(is.null(colnames(Geno.mtx))) stop("Column names of 'Geno.mtx' should be given.")
