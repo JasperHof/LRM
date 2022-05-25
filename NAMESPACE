@@ -1,0 +1,10 @@
+exportPattern("^[[:alpha:]]+")
+
+import(stats)
+import(bigsnpr)
+import(utils)
+import(coxme)
+import(RSQLite)
+import(genio)
+
+#importFrom('stats', 'bigsnpr', 'utils', 'coxme', 'RSQLite', 'genio')
