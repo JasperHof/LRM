@@ -22,10 +22,10 @@ LRM.bgen(
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{bgenfile}{
-    character, the name of the .bgen file, without '.bgen'
+    character, the name of the .bgen file, without '.bgen'.
 }
   \item{gIDs}{
-    character vector of genotype IDs, in the same order as the .bgen file
+    character vector of genotype IDs, in the same order as the .bgen file.
 }
   \item{obj.null}{
     an R object returned from 'Null_model()'
@@ -47,10 +47,37 @@ LRM.bgen(
   }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+To run LRM for .bgen files, the user should first fit a null model based on the phenotype data. This null model is used to compute martingale residuals, and their distribution is empirically estimated using a the saddle-point approximation.
+
+Subsequently, this function can be used to compute association statistics between SNPs in the .gen file and martingale residuals.
 }
+
 \value{
-The output contains name of SNP, P values and other summary statistics of the linear regression
+The output file contains a matrix with the following columns
+\item{SNP}{
+  Name of SNP
+}
+\item{Beta}{
+  Slope coefficient of the linear regression
+}
+\item{pMG}{
+  P value from linear regression on martingale residuals
+}
+\item{pSPA}{
+  P value from linear regression, corrected using a saddle-point approximation (recommended)
+}
+\item{SE}{
+  Standard error of beta in linear regression
+}
+\item{Z}{
+  Z-statistic in linear regression
+}
+\item{MAF}{
+  Minor allele frequency of SNP
+}
+\item{Missing}{
+  Fraction of missing SNPs
+}
 }
 \references{
 %% ~put references to the literature/web site here ~
@@ -59,26 +86,11 @@ The output contains name of SNP, P values and other summary statistics of the li
 Jasper Hof
 }
 \note{
-
+Application is similar to the LRM.bed() function for .bed files, however the sample IDs of the .bgen file should be exactly the same as the 'gIDs' argument.
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
-\examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
 
-}
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.

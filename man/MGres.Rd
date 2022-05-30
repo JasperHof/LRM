@@ -5,7 +5,7 @@
    Compute martingale residuals from a coxme null model
 }
 \description{
-   The cumulative baseline hazards are computed from the null model, based on Breslows formula. Subsequently, martingale residuals are computed.
+   The cumulative baseline hazards are computed from the null model, based on Breslows formula. Subsequently,    martingale residuals are computed.
 }
 \usage{
 MGres(
@@ -16,13 +16,14 @@ MGres(
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{fitme}{
-    A 'coxme' object that is fitted for the null model
+    A 'coxme' object that is fitted for the null model. This object is obtained from the 'coxme' function.
 }
   \item{data}{
-    The data frame that is used for fitting the coxme object. This data frame should include the samples under column name 'subjects'.}
+    The data frame that is used for fitting the coxme object.
+}
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+The data frame should include the samples under column name 'subjects'.
 }
 \value{
     A numeric vector containing outcome martingale residuals for all subjects
@@ -43,21 +44,32 @@ MGres(
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+library(coxme)
 
-## The function is currently defined as
-function (x)
-{
-  }
+# Read recurrent event data
+datafile = system.file('extdata', 'Recurrencedata', package = 'LRM')
+data <- read.csv2(datafile, stringsAsFactors = FALSE)
+data = as.data.frame(data)
+
+# Examples for four different recurrent event models:
+# Fit a nonstratified calendar time model (AG model)
+fitme = coxme(Surv(tstart, tstop, Status) ~ X1 + X2 + X3 + (1|subject), data = data, ties = 'breslow')
+mresids = MGres(fitme, data)
+
+# Stratified calendar time model (PWP-CT model)
+fitme = coxme(Surv(tstart, tstop, Status) ~ X1 + X2 + X3 + strata(Recurrence) + (1|subject), data = data, ties = 'breslow')
+mresids = MGres(fitme, data)
+
+# Create new data set for gap time data
+GTdata = data; GTdata$tstop = GTdata$tstop - GTdata$tstart
+
+# Nonstratified gap time model (GT-UR model)
+fitme = coxme(Surv(tstop, Status) ~ X1 + X2 + X3 + (1|subject), data = GTdata, ties = 'breslow')
+mresids = MGres(fitme, data)
+
+# Stratified gap time model (PWP-GT)
+fitme = coxme(Surv(tstop, Status) ~ X1 + X2 + X3 + strata(Recurrence) + (1|subject), data = GTdata, ties = 'breslow')
+mresids = MGres(fitme, data)
+
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.
+

@@ -10,20 +10,31 @@
 \usage{
 Null_model(
   fitme,
-  data
-)
+  data,
+  IDs = NULL,
+  range = c(-20,20),
+  length.out = 50000
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{fitme}{
-    A 'coxme' object that is fitted for the null model
+    A 'coxme' object that is fitted for the null model. This object is obtained from the 'coxme' function.
 }
   \item{data}{
-    The data frame that is used for fitting the coxme object. This data frame should include the samples under column name 'subjects'. }
-
+    The data frame that is used for fitting the coxme object.
+}
+  \item{IDs}{
+    Character vector of subjects in data frame
+  }
+  \item{range}{
+    A two-element numeric vector to specify the domain of the empirical CGF of the martingale residuals (default: (-20     ,20)).
+  }
+  \item{length.out}{
+    A positive integer (default: 50000), specifying the number of points used to compute the empirical CGF of the        martingale residuals
+  }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+The data frame should include the samples under column name 'subjects'.
 }
 \value{
     Object of class 'NULL_model' which includes martingale residuals, the derivatives of the CGF and the IDs.
@@ -44,21 +55,19 @@ Jasper Hof
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
 
-## The function is currently defined as
-function (x)
-{
-  }
+# Example code for computing a Null model
+library(coxme)
+
+# Read phenotype data
+datafile = system.file('extdata', 'Recurrencedata', package = 'LRM')
+data <- read.csv2(datafile, stringsAsFactors = FALSE)
+data = as.data.frame(data)
+
+# Fit a null model
+fitme = coxme(Surv(tstart, tstop, Status) ~ X1 + X2 + X3 + (1|subject), data = data, ties = 'breslow')
+
+# Compute the null model object, including martingale residuals and saddle-point approximation
+obj.null = Null_model(fitme, data, IDs = unique(data$subject))
+
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.

@@ -336,9 +336,9 @@ LRM.bgen <- function(bgenfile, gIDs,
                   p.cutoff = p.cutoff)
 
     if(r == 1){
-      data.table::fwrite(outcome, output.file, sep = "\t", append = F, row.names = F, col.names = T)
+      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
     } else {
-      data.table::fwrite(outcome, output.file, sep = "\t", append = T, row.names = F, col.names = F)
+      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
     }
 
     ### Clean up directory by removing previous connections
@@ -365,8 +365,8 @@ LRM.bed <- function(bedfile, gIDs,
 
 
   bim.file = paste0(bedfile, ".bim")
-  bed.file = paste0(bedfile, ".bed")
   fam.file = paste0(bedfile, ".fam")
+  bed.file = paste0(bedfile, ".bed")
 
   if(!file.exists(bim.file)) stop("Could not find paste0(bedfile,'.bim')")
   if(!file.exists(bed.file)) stop("Could not find paste0(bedfile,'.bed')")
@@ -410,9 +410,9 @@ LRM.bed <- function(bedfile, gIDs,
                   min.maf = min.maf,
                   p.cutoff = p.cutoff)
     if(r == 1){
-      data.table::fwrite(outcome, output.file, sep = "\t", append = F, row.names = F, col.names = T)
+      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
     } else {
-      data.table::fwrite(outcome, output.file, sep = "\t", append = T, row.names = F, col.names = F)
+      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
     }
   }
 }

@@ -5,7 +5,7 @@
  Linear regression on martingale residuals
 }
 \description{
-Carry out the linear regression on martingale resduals based on an input null model and genotype data.
+Carry out linear regression on martingale resduals based on input null model and genotype matrix
 }
 \usage{
 LRM(
@@ -19,26 +19,52 @@ LRM(
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{obj.null}{
-    Null model
+    an R object returned from 'Null_model()'.
 }
   \item{Geno.mtx}{
-    Genotype matrix, with subjects in row names and SNP names in column names.
+    Genotype matrix, with subjects IDs in row names and SNP names in column names.
 }
   \item{missing.cutoff}{
-    Threshold for rate of missing SNPs
-}
+  Cut-off rate for number of missing genotypes
+  }
   \item{min.maf}{
-    MAF threshold
-}
+  Minimum minor allele frequency
+  }
   \item{p.cutoff}{
-    p value threshold for applying saddle-point approximation
-}
+  Cut-off P value for implementing a saddle-point approximation.
+  }
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+To run LRM for a matrix of genotype data, the user should first fit a null model based on the phenotype data. This null model is used to compute martingale residuals, and their distribution is empirically estimated using a the saddle-point approximation.
+
+Subsequently, this function can be used to compute association statistics between SNPs in the genotype matrix and martingale residuals.
 }
 \value{
-     The output contains name of SNP, P values and other outcomes of the linear regression
+The output file contains a matrix with the following columns
+\item{SNP}{
+  Name of SNP
+}
+\item{Beta}{
+  Slope coefficient of the linear regression
+}
+\item{pMG}{
+  P value from linear regression on martingale residuals
+}
+\item{pSPA}{
+  P value from linear regression, corrected using a saddle-point approximation (recommended)
+}
+\item{SE}{
+  Standard error of beta in linear regression
+}
+\item{Z}{
+  Z-statistic in linear regression
+}
+\item{MAF}{
+  Minor allele frequency of SNP
+}
+\item{Missing}{
+  Fraction of missing SNPs
+}
 }
 \references{
 %% ~put references to the literature/web site here ~
@@ -56,17 +82,29 @@ Jasper Hof
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-#
-# Bla bla
-#
-#
+
+library(coxme)
+
+# Read phenotype data
+datafile = system.file('extdata', 'Recurrencedata', package = 'LRM')
+data <- read.csv2(datafile, stringsAsFactors = FALSE)
+data = as.data.frame(data)
+
+# Generate genotype data in matrix
+N = length(unique(data$subject))
+m_loci = 10000
+MAF = 0.3
+Geno.mtx = matrix(rbinom(N * m_loci, 2, prob = MAF), nrow = N)
+rownames(Geno.mtx) = unique(data$subject)
+colnames(Geno.mtx) = paste0('rs',1:m_loci)
+
+# Fit a null model
+fitme = coxme(Surv(tstart, tstop, Status) ~ X1 + X2 + X3 + (1|subject), data = data, ties = 'breslow')
+
+# Compute the null model object
+obj.null = Null_model(fitme, data, IDs = unique(data$subject))
+
+# Carry out the linear regression on martingale residuals
+Outcome = LRM(obj.null, Geno.mtx)
+
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.
