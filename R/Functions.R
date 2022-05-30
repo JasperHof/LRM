@@ -1,11 +1,24 @@
+# dependencies:
+library(coxme)
+library(bigsnpr)
+library(RSQLite)
+library(seqminer)
+
+#
+#
+#           Functions to be included in the LRM package
+#
+#
+
 MGres <- function(fitme = NULL, data = NULL){             # Compute martingale residuals
 
+  ### Check input arguments
   MGres_check(fitme, data)
 
-  # Check the names of 'strata' columns in the data
+  ### Find the strata in formula and data
   check_strat = strsplit(as.character(fitme$formulaList$fixed)[3],'strata')[[1]]
 
-  if(length(check_strat) > 1){        # In this case, strata have been specified..
+  if(length(check_strat) > 1){
     name = substring(strsplit(check_strat[2], ')')[[1]][1],2)
     strats = data[,which(colnames(data) == name)]
   } else strats = rep(0, dim(data)[1])
@@ -14,14 +27,14 @@ MGres <- function(fitme = NULL, data = NULL){             # Compute martingale r
   cumhaz = rep(0, length(unique(data$subject)))     # Vector of cumulative hazards per subject
   events = as.data.frame(as.matrix(fitme$y))        # Matrix with event times and status
 
-  for(strat in strat_list){     # For every stratum, compute the cumulative baseline hazard for all individuals within this stratum
+
+  ### Compute the cumulative baseline hazards for all individuals in each stratum
+  for(strat in strat_list){
     in_strat = which(strats == strat)
 
-    # ---- DETERMINE THE BASELINE HAZARD FOR THIS STRATUM ----
+    basehaz = rep(0,length = dim(events)[1])
 
-    basehaz = rep(0,length = dim(events)[1])  # Base hazard for all possible time points
-
-    if(dim(events)[2] > 2){                   # In case tstart is specified (gap time/calendar time model)
+    if(dim(events)[2] > 2){              # In case tstart is specified (gap time/calendar time model)
       eventtimes = events$stop
 
       for(i in 1:length(eventtimes)){
@@ -33,12 +46,12 @@ MGres <- function(fitme = NULL, data = NULL){             # Compute martingale r
 
         basehaz[i] = nom/denom
       }
-    } else {                             # If tstart not specified, gap time
+    } else {                             # If tstart is not specified, gap time model
       eventtimes = events$time
 
       for(i in 1:length(eventtimes)){
         time = eventtimes[i]
-        risk.set = which(events$time >= time & strats == strat)     # No constraint on gap time
+        risk.set = which(events$time >= time & strats == strat)
 
         denom = sum(exp(fitme$linear.predictor[risk.set]))
         nom = sum(events$time == time & events$status == 1 & strats == strat)
@@ -47,8 +60,7 @@ MGres <- function(fitme = NULL, data = NULL){             # Compute martingale r
       }
     }
 
-    # ---- COMPUTE INDIVIDUAL CUMULATIVE HAZARDS FOR THIS STRATUM ----
-
+    ### Compute individual cumulative baseline hazard from baseline hazard
     for(i in 1:length(unique(data$subject))){
       rows = which(data$subject == unique(data$subject)[i] & strats == strat)      # The 'rows' of individual i in the stratum
 
@@ -69,14 +81,15 @@ MGres <- function(fitme = NULL, data = NULL){             # Compute martingale r
   individual_prop_haz = rep(0, length(unique(data$subject)))
   count = rep(0, length(unique(data$subject)))
 
-  for(i in 1:length(unique(data$subject))){   # HIER GEBLEVEN !!!
+  ### Multiply cumulative hazards with proportional hazards, compute number of recurrences
+  for(i in 1:length(unique(data$subject))){
 
     set = which(data$subject == unique(data$subject)[i])
     individual_prop_haz[i] = fitme$linear.predictor[set[1]]
     count[i] = sum(events$status[set] == 1)
   }
 
-  lambda = cumhaz * exp(individual_prop_haz)  # Cumulative hazard
+  lambda = cumhaz * exp(individual_prop_haz)
   resids = count - lambda                     # Martingale residuals
   names(resids) = unique(data$subject)
 
@@ -107,7 +120,7 @@ Null_model <- function(fitme,
   idx1 = idx0 * max(range) / max(idx0)
 
   cumul = NULL
-  print("Start calculating empirical CGF for martingale residuals...")
+  print("Compute empirical CGF for martingale residuals...")
   c = 0
   for(i in idx1){
     c = c+1
@@ -166,12 +179,13 @@ LRM = function(obj.null,
   ### ----------------- Quality Control ---------------
   #
 
-  ### Only select genotypes that we also have a phenotype of
+  ### Only select genotypes that have a phenotype
   mresid = obj.null$resid
   Complete = intersect(names(mresid), IDs)
   Geno.mtx = Geno.mtx[which(rownames(Geno.mtx) %in% Complete),]
 
-  ### Filter on call rate, minor allele frequency,
+  ### Filter on call rate, minor allele frequency, and match entries of genotype and phenotype
+  Geno.mtx[Geno.mtx == -9] = NA                  # for plink input
   SNP.callrate = colMeans(is.na(Geno.mtx))
   if(any(SNP.callrate > missing.cutoff)){ Geno.mtx = Geno.mtx[,-which(SNP.callrate > missing.cutoff)] }
 
@@ -183,42 +197,39 @@ LRM = function(obj.null,
   mresid = mresid[which(names(mresid) %in% Complete)]
   MG = mresid[match(rownames(G), names(mresid))]
 
-  # ------------------------------------------------------------------------------
-  # ------ Couple Genotype G to martingale residuals MG and do the analysis -----------
-  # ------------------------------------------------------------------------------
+  #
+  ### Perform Linear regression for all SNPs simultaneously using matrix multiplication
+  #
 
-  print("Start linear regression..")
-  print(Sys.time())
+  print(paste0("Start linear regression at ", Sys.time()))
 
-  # Define outcome ytr and intercept X
+  ### Define outcome Y and intercept X
   n = dim(G)[1]
   X = as.matrix(rep(1,dim(G)[1]), nrow = dim(G)[1],ncol=1)
-  ytr = as.matrix(MG)
+  Y = as.matrix(MG)
 
-  # Scale genotypes to have mean 0
-  U3 = crossprod(X, G)
-  U4 = solve(crossprod(X), U3)
-  Str = G - as.matrix(X %*% U4)
+  ### Scale genotypes to have mean 0 and compute slopes
+  Str = G - as.matrix(X %*% colMeans(G))
+  if(sum(No_Geno) > 0)  Str[No_Geno] <- 0
+  b = crossprod(Y, Str)/colSums(Str ^ 2)
 
-  ## Compute slopes
-  if(sum(No_Geno) > 0)  Str[No_Geno] <- 0                             # Exclude the entries from computation by setting them to zero
-  b = crossprod(ytr, Str)/colSums(Str ^ 2)
-
-  ## Compute P values in LRM
+  ### Compute P values in LRM
   S_sq = colSums(Str ^ 2)
-  RSS = crossprod(ytr^2, !No_Geno) - b ^ 2 * S_sq
+  RSS = crossprod(Y^2, !No_Geno) - b ^ 2 * S_sq
   sigma_hat = RSS/(n - 2)
   error = sqrt(sigma_hat/ S_sq)
   pval.mg = as.numeric(2 * pnorm(-abs (b / error)))
 
-  # Prepare the output file
+  ### Prepare the output file
   b = as.numeric(b); error = as.numeric(error)
 
   outcome = cbind(SNP = colnames(G), MAF = colMeans(G)/2, Missing = colSums(is.na(G)),
                   pSPA = pval.mg, pMG = pval.mg, Beta = b, SE = error, Z = abs(b / error))
   outcome = as.data.frame(outcome, stringsAsFactors = F)
-  outcome$pMG = as.numeric(outcome$pMG)
-  outcome$pSPA = as.numeric(outcome$pSPA)
+
+  outcome = transform(outcome, Beta = as.numeric(Beta), pMG = as.numeric(pMG), pSPA = as.numeric(pSPA),
+                      SE = as.numeric(SE), Z = as.numeric(Z), MAF = as.numeric(MAF), Missing = as.integer(Missing))
+  rownames(outcome) = NULL
 
   #
   # ------ use SPA for SNPs with P value below cut-off point ------
@@ -263,16 +274,20 @@ LRM = function(obj.null,
 
 LRM.bgen <- function(bgenfile, gIDs,
                      obj.null,
+                     output.file,
                      chr = NULL,
                      missing.cutoff = 0.05,
                      min.maf = 0.05,
                      p.cutoff = 0.001){
 
 
-
+  bgenfile = paste0(bgenfile, '.bgen')
   bgifile = paste0(bgenfile,'.bgi')
 
-  ### Create 'myid' variable for reading .bgen files
+  if(!file.exists(bgenfile)) stop("Could not find .bgen file")
+  if(!file.exists(bgifile)) stop("Could not find .bgen.bgi file")
+
+  ### Create 'myid' variable for reading .bgen SNPs
   db_con <- RSQLite::dbConnect(RSQLite::SQLite(), bgifile)
   on.exit(RSQLite::dbDisconnect(db_con), add = TRUE)
   infos <- dplyr::collect(dplyr::tbl(db_con, "Variant"))
@@ -287,6 +302,9 @@ LRM.bgen <- function(bgenfile, gIDs,
   chunksize = floor(matrixsize/length(obj.null$resid))
   reps = ceiling(size/chunksize)
   outcome = NULL
+
+  print(paste0("Split all markers into ", reps, " chunks."))
+  print(paste0("Each chunk includes less than ", chunksize, " markers."))
 
   ### Analyze .bgen files per chunk
   for(r in 1:reps){
@@ -311,11 +329,17 @@ LRM.bgen <- function(bgenfile, gIDs,
     rownames(Geno.mtx) = gIDs
 
     # Executing the linear regression
-    outcome = rbind(outcome, LRM(obj.null = obj.null,
-                                 Geno.mtx = Geno.mtx,
-                                 missing.cutoff = missing.cutoff,
-                                 min.maf = min.maf,
-                                 p.cutoff = p.cutoff))
+    outcome = LRM(obj.null = obj.null,
+                  Geno.mtx = Geno.mtx,
+                  missing.cutoff = missing.cutoff,
+                  min.maf = min.maf,
+                  p.cutoff = p.cutoff)
+
+    if(r == 1){
+      data.table::fwrite(outcome, output.file, sep = "\t", append = F, row.names = F, col.names = T)
+    } else {
+      data.table::fwrite(outcome, output.file, sep = "\t", append = T, row.names = F, col.names = F)
+    }
 
     ### Clean up directory by removing previous connections
     for(k in 1:r){
@@ -325,10 +349,73 @@ LRM.bgen <- function(bgenfile, gIDs,
       unlink(prev.file)
     }
   }
-  return(outcome)
 }
 
+#
+# LRM for .bed files
+#
 
+LRM.bed <- function(bedfile, gIDs,
+                    obj.null,
+                    output.file,
+                    chr = NULL,
+                    missing.cutoff = 0.05,
+                    min.maf = 0.05,
+                    p.cutoff = 0.001){
+
+
+  bim.file = paste0(bedfile, ".bim")
+  bed.file = paste0(bedfile, ".bed")
+  fam.file = paste0(bedfile, ".fam")
+
+  if(!file.exists(bim.file)) stop("Could not find paste0(bedfile,'.bim')")
+  if(!file.exists(bed.file)) stop("Could not find paste0(bedfile,'.bed')")
+  if(!file.exists(fam.file)) stop("Could not find paste0(bedfile,'.fam')")
+
+  fam.data = read.table(fam.file, stringsAsFactors = F)
+  bim.data = read.table(bim.file, stringsAsFactors = F)
+
+  N = nrow(fam.data)
+  M = nrow(bim.data)
+
+  print(paste0("Totally ", M, " markers in plink files."))
+  if(!any(obj.null$IDs %in% fam.data$V2)){
+    stop("None of the subject IDs from null model were found in the .fam file")
+  } else { print(paste0('In total, ', length(intersect(obj.null$IDs, fam.data$V2)),' samples found in genotype and phenotype'))}
+
+  total.samples = intersect(obj.null$IDs, fam.data$V2)
+
+  size = dim(bim.data)[1]
+  matrixsize = 5e6
+  chunksize = floor(matrixsize/length(total.samples))
+  reps = ceiling(size/chunksize)
+  outcome = NULL
+
+  print(paste0("Split all markers into ", reps, " chunks."))
+  print(paste0("Each chunk includes less than ", chunksize, " markers."))
+
+  outcome = NULL
+
+  for(r in 1:reps){
+
+    print(paste0('Reading chunk ', r, ' of ',reps))
+    indices = c(((r-1)*chunksize + 1):min(r*chunksize, size))
+
+    Geno.mtx = seqminer::readPlinkToMatrixByIndex(bedfile, 1:N, indices)
+    colnames(Geno.mtx) = bim.data$V2[indices]
+
+    outcome = LRM(obj.null = obj.null,
+                  Geno.mtx = Geno.mtx,
+                  missing.cutoff = missing.cutoff,
+                  min.maf = min.maf,
+                  p.cutoff = p.cutoff)
+    if(r == 1){
+      data.table::fwrite(outcome, output.file, sep = "\t", append = F, row.names = F, col.names = T)
+    } else {
+      data.table::fwrite(outcome, output.file, sep = "\t", append = T, row.names = F, col.names = F)
+    }
+  }
+}
 
 #
 # CHECKING LRM input
@@ -337,7 +424,7 @@ LRM.bgen <- function(bgenfile, gIDs,
 check_input_LRM = function(obj.null, Geno.mtx, par.list)
 {
   if(class(obj.null)!="NULL_Model")
-    stop("obj.null should be a returned outcome from the function SPACox_Null_Model()")
+    stop("obj.null should be a returned outcome from SPACox_Null_Model()")
 
   if(is.null(rownames(Geno.mtx))) stop("Row names of 'Geno.mtx' should be given.")
   if(is.null(colnames(Geno.mtx))) stop("Column names of 'Geno.mtx' should be given.")
@@ -454,3 +541,5 @@ na_mean = function (x, option = "mean", maxgap = Inf) {
     return(data)
   }
 }
+
+

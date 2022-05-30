@@ -8,7 +8,10 @@
   Computes martingale residuals based on a specified coxme null model, and computes a saddle-point approximation for the distribution of regression coefficients in LRM
 }
 \usage{
-Null_model(fitme, data)
+Null_model(
+  fitme,
+  data
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

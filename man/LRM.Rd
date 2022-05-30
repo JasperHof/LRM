@@ -8,7 +8,13 @@
 Carry out the linear regression on martingale resduals based on an input null model and genotype data.
 }
 \usage{
-LRM(obj.null, Geno.mtx, missing.cutoff = 0.05, min.maf = 0.05, p.cutoff = 0.001)
+LRM(
+  obj.null,
+  Geno.mtx,
+  missing.cutoff = 0.05,
+  min.maf = 0.05,
+  p.cutoff = 0.001
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

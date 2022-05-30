@@ -5,6 +5,6 @@ import(bigsnpr)
 import(utils)
 import(coxme)
 import(RSQLite)
-import(genio)
+import(seqminer)
 
-#importFrom('stats', 'bigsnpr', 'utils', 'coxme', 'RSQLite', 'genio')
+#importFrom('stats', 'bigsnpr', 'utils', 'coxme', 'RSQLite', 'seqminer')

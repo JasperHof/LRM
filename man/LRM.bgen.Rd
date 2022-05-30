@@ -2,52 +2,64 @@
 \alias{LRM.bgen}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
- Linear regression on martingale residuals for .bgen files
+Linear regression on martingale residuals for .bgen files.
 }
 \description{
- Carry out a linear regression on martingale residuals for .bgen files
+Carry out a linear regression on martingale residuals for .bgen files
 }
 \usage{
-LRM.bgen(bgenfile, gIDs, obj.null, chr = NULL, missing.cutoff = 0.05, min.maf = 0.05, p.cutoff = 0.001)
+LRM.bgen(
+  bgenfile,
+  gIDs,
+  obj.null,
+  output.file,
+  chr = NULL,
+  missing.cutoff = 0.05,
+  min.maf = 0.05,
+  p.cutoff = 0.001
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{bgenfile}{
-    The name of the .bgen file, without '.bgen'
+    character, the name of the .bgen file, without '.bgen'
 }
   \item{gIDs}{
-    Name of the genotype IDs, in the same order as the .bgen file
+    character vector of genotype IDs, in the same order as the .bgen file
 }
   \item{obj.null}{
-    Null model object
+    an R object returned from 'Null_model()'
 }
+  \item{output.file}{
+    character, the name of the output file for GWAS summary statistics
+  }
   \item{chr}{
-    Number of the chromosome
-}
+  Chromosome number
+  }
   \item{missing.cutoff}{
-    Threshold for rate of missing SNPs
-}
+  Cut-off rate for number of missing genotypes
+  }
   \item{min.maf}{
-    MAF threshold
-}
+  Minimum minor allele frequency
+  }
   \item{p.cutoff}{
-    p value threshold for applying saddle-point approximation
-}
+  Cut-off P value for implementing a saddle-point approximation.
+  }
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-The output contains name of SNP, P values and other outcomes of the linear regression
+The output contains name of SNP, P values and other summary statistics of the linear regression
 }
 \references{
 %% ~put references to the literature/web site here ~
 }
 \author{
-%%  ~~who you are~~
+Jasper Hof
 }
 \note{
-Jasper Hof
+
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~

@@ -8,7 +8,10 @@
    The cumulative baseline hazards are computed from the null model, based on Breslows formula. Subsequently, martingale residuals are computed.
 }
 \usage{
-MGres(fitme, data)
+MGres(
+  fitme,
+  data
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

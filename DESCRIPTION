@@ -3,10 +3,10 @@ Type: Package
 Title: Linear regression on maringale residuals for GWAS
 Version: 0.1.0
 Author: Jasper Hof
-Imports: stats, bigsnpr, utils, coxme, RSQLite, genio
+Imports: stats, bigsnpr, utils, coxme, RSQLite, seqminer
 Maintainer: Jasper Hof <Jasper.Hof@radboudumc.nl>
 Description: Linear regression on martingale residuals for recurrent
     event analysis in GWAS.
-License: What license is it under?
+License: None
 Encoding: UTF-8
 LazyData: true
