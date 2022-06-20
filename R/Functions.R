@@ -285,6 +285,7 @@ LRM.bgen <- function(bgenfile, gIDs,
 
   if(!file.exists(bgenfile)) stop("Could not find .bgen file")
   if(!file.exists(bgifile)) stop("Could not find .bgen.bgi file")
+  if(!dir.exists('Connections')) dir.create('Connections')
 
   ### Create 'myid' variable for reading .bgen SNPs
   db_con <- RSQLite::dbConnect(RSQLite::SQLite(), bgifile)
@@ -312,7 +313,7 @@ LRM.bgen <- function(bgenfile, gIDs,
     indices = c(((r-1)*chunksize + 1):min(r*chunksize, size))
 
     if(is.null(chr)) chr = as.numeric(infos$chromosome[indices[1]])
-    backfile = paste0(getwd(),'/tmpfile',chr,'_',r)
+    backfile = paste0(getwd(),'/Connections/tmpfile',chr,'_',r)
 
     snps = list(); snps[[1]] = infos$myid[indices]         # The names of the SNPs in this chunk
     bgen = snp_readBGEN(bgenfiles = bgenfile, list_snp_id = snps, backingfile = backfile, ncores = 1)
@@ -347,9 +348,9 @@ LRM.bgen <- function(bgenfile, gIDs,
 
     ### Clean up directory by removing previous connections
     for(k in 1:r){
-      prev.file = paste0(getwd(),'/tmpfile',chr,'_',k)
+      prev.file = paste0(getwd(),'/Connections/tmpfile',chr,'_',k)
       unlink(prev.file)
-      prev.file = paste0(getwd(),'/tmpfile',chr,'_',k)
+      prev.file = paste0(getwd(),'/Connections/tmpfile',chr,'_',k)
       unlink(prev.file)
     }
   }
