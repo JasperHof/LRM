@@ -201,7 +201,7 @@ LRM = function(obj.null,
   ### Perform Linear regression for all SNPs simultaneously using matrix multiplication
   #
 
-  print(paste0("Start linear regression at ", Sys.time()))
+  print(paste0("LRM-SPA started at ", Sys.time()))
 
   ### Define outcome Y and intercept X
   n = dim(G)[1]
@@ -262,8 +262,7 @@ LRM = function(obj.null,
     outcome$pSPA[i] = p_SPA
   }
 
-  print("Analysis Complete.")
-  print(Sys.time())
+  print(paste0("LRM-SPA completed at ",Sys.time()))
 
   return(outcome)
 }
@@ -335,10 +334,15 @@ LRM.bgen <- function(bgenfile, gIDs,
                   min.maf = min.maf,
                   p.cutoff = p.cutoff)
 
+
+    new_outcome = cbind(SNP = outcome$SNP, t(matrix(unlist(strsplit(outcome$SNP, split = '_')), nrow = 4)), outcome[,-1])
+    colnames(new_outcome)[2:5] = c('Chr','BP','A1','A2')
+
+
     if(r == 1){
-      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
+      data.table::fwrite(new_outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
     } else {
-      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
+      data.table::fwrite(new_outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
     }
 
     ### Clean up directory by removing previous connections
@@ -402,17 +406,20 @@ LRM.bed <- function(bedfile, gIDs,
     indices = c(((r-1)*chunksize + 1):min(r*chunksize, size))
 
     Geno.mtx = seqminer::readPlinkToMatrixByIndex(bedfile, 1:N, indices)
-    colnames(Geno.mtx) = bim.data$V2[indices]
+    colnames(Geno.mtx) = paste0(bim.data$V1[indices], '_', bim.data$V2[indices],'_', bim.data$V5[indices],'_', bim.data$V6[indices], '_', bim.data$V4[indices])
 
     outcome = LRM(obj.null = obj.null,
                   Geno.mtx = Geno.mtx,
                   missing.cutoff = missing.cutoff,
                   min.maf = min.maf,
                   p.cutoff = p.cutoff)
+    new_outcome = cbind(t(matrix(unlist(strsplit(outcome$SNP, split = '_')), nrow = 5)), outcome[,-1])
+    colnames(new_outcome)[1:5] = c('Chr','SNP','A1','A2','BP')
+
     if(r == 1){
-      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
+      data.table::fwrite(new_outcome, paste0(output.file,'.txt'), sep = "\t", append = F, row.names = F, col.names = T)
     } else {
-      data.table::fwrite(outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
+      data.table::fwrite(new_outcome, paste0(output.file,'.txt'), sep = "\t", append = T, row.names = F, col.names = F)
     }
   }
 }

@@ -5,7 +5,7 @@
 Linear regression on martingale residuals for .bgen files.
 }
 \description{
-Carry out a linear regression on martingale residuals for .bgen files
+Linear regression on martingale residuals for .bgen files
 }
 \usage{
 LRM.bgen(

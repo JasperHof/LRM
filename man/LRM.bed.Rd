@@ -5,7 +5,7 @@
 Linear regression on martingale residuals for .bed files.
 }
 \description{
-Carry out a linear regression on martingale residuals for .bed files
+Linear regression on martingale residuals for .bed files
 }
 \usage{
 LRM.bed(
