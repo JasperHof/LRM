@@ -10,89 +10,77 @@ library(seqminer)
 #
 #
 
-MGres <- function(fitme = NULL, data = NULL){             # Compute martingale residuals
-
-  ### Check input arguments
+MGres <- function (fitme = NULL, data = NULL)
+{
   MGres_check(fitme, data)
-
-  ### Find the strata in formula and data
-  check_strat = strsplit(as.character(fitme$formulaList$fixed)[3],'strata')[[1]]
-
-  if(length(check_strat) > 1){
-    name = substring(strsplit(check_strat[2], ')')[[1]][1],2)
-    strats = data[,which(colnames(data) == name)]
+  check_strat = strsplit(as.character(fitme$formulaList$fixed)[3],
+                         "strata")[[1]]
+  if (length(check_strat) > 1) {
+    name = substring(strsplit(check_strat[2], ")")[[1]][1],
+                     2)
+    strats = data[, which(colnames(data) == name)]
   } else strats = rep(0, dim(data)[1])
+  strat_list = unique(strats)
 
-  strat_list = unique(strats)                       # Vector of strata names
-  cumhaz = rep(0, length(unique(data$subject)))     # Vector of cumulative hazards per subject
-  events = as.data.frame(as.matrix(fitme$y))        # Matrix with event times and status
+  cumhaz = rep(0, length(unique(data$subject)))
 
-
-  ### Compute the cumulative baseline hazards for all individuals in each stratum
-  for(strat in strat_list){
+  events = as.data.frame(as.matrix(fitme$y))
+  for (strat in strat_list) {
     in_strat = which(strats == strat)
 
-    basehaz = rep(0,length = dim(events)[1])
+    basehaz = as.data.frame(cbind(rep(0, length = length(unique(events$stop))), unique(events$stop)))
+    colnames(basehaz) = c('Haz', 'Time')
 
-    if(dim(events)[2] > 2){              # In case tstart is specified (gap time/calendar time model)
+    if (dim(events)[2] > 2) {
       eventtimes = events$stop
-
-      for(i in 1:length(eventtimes)){
-        time = eventtimes[i]
-        risk.set = which(events$start < time & events$stop >= time & strats == strat)
-
+      for (i in 1:length(unique(events$stop))) {
+        time = basehaz$Time[i]
+        risk.set = which(events$start < time & events$stop >=
+                           time & strats == strat)
         denom = sum(exp(fitme$linear.predictor[risk.set]))
-        nom = sum(events$stop == time & events$status == 1 & strats == strat)
-
-        basehaz[i] = nom/denom
+        nom = sum(events$stop == time & events$status ==
+                    1 & strats == strat)
+        basehaz$Haz[i] = nom/denom
       }
-    } else {                             # If tstart is not specified, gap time model
+    } else {
       eventtimes = events$time
-
-      for(i in 1:length(eventtimes)){
-        time = eventtimes[i]
-        risk.set = which(events$time >= time & strats == strat)
-
+      for (i in 1:length(unique(events$stop))) {
+        time = basehaz$Time[i]
+        risk.set = which(events$time >= time & strats ==
+                           strat)
         denom = sum(exp(fitme$linear.predictor[risk.set]))
-        nom = sum(events$time == time & events$status == 1 & strats == strat)
-
-        basehaz[i] = nom/denom
+        nom = sum(events$time == time & events$status ==
+                    1 & strats == strat)
+        basehaz$Haz[i] = nom/denom
       }
     }
-
-    ### Compute individual cumulative baseline hazard from baseline hazard
-    for(i in 1:length(unique(data$subject))){
-      rows = which(data$subject == unique(data$subject)[i] & strats == strat)      # The 'rows' of individual i in the stratum
-
-      if(length(rows) > 0){
-        for(r in 1:length(rows)){
-          if(dim(events)[2] > 2){
-            haz = sum(basehaz[which(events$start[rows[r]] < events$stop & events$stop <= events$stop[rows[r]])])
+    for (i in 1:length(unique(data$subject))) {
+      rows = which(data$subject == unique(data$subject)[i] &
+                     strats == strat)
+      if (length(rows) > 0) {
+        for (r in 1:length(rows)) {
+          if (dim(events)[2] > 2) {
+            haz = sum(basehaz$Haz[which(events$start[rows[r]] <
+                                          basehaz$Time & basehaz$Time <= events$stop[rows[r]])])
             cumhaz[i] = cumhaz[i] + haz
           } else {
-            haz = sum(basehaz[which(events$time <= events$time[rows[r]])])
+            haz = sum(basehaz$Haz[which(basehaz$Time <= events$time[rows[r]])])
             cumhaz[i] = cumhaz[i] + haz
           }
         }
       }
     }
   }
-
   individual_prop_haz = rep(0, length(unique(data$subject)))
   count = rep(0, length(unique(data$subject)))
-
-  ### Multiply cumulative hazards with proportional hazards, compute number of recurrences
-  for(i in 1:length(unique(data$subject))){
-
+  for (i in 1:length(unique(data$subject))) {
     set = which(data$subject == unique(data$subject)[i])
     individual_prop_haz[i] = fitme$linear.predictor[set[1]]
     count[i] = sum(events$status[set] == 1)
   }
-
   lambda = cumhaz * exp(individual_prop_haz)
-  resids = count - lambda                     # Martingale residuals
+  resids = count - lambda
   names(resids) = unique(data$subject)
-
   return(resids)
 }
 
