@@ -13,6 +13,8 @@ library(seqminer)
 MGres <- function (fitme = NULL, data = NULL)
 {
   MGres_check(fitme, data)
+
+  ### Find the strata included in the coxme fit
   check_strat = strsplit(as.character(fitme$formulaList$fixed)[3],
                          "strata")[[1]]
   if (length(check_strat) > 1) {
@@ -24,6 +26,7 @@ MGres <- function (fitme = NULL, data = NULL)
 
   cumhaz = rep(0, length(unique(data$subject)))
 
+  ### Compute baseline hazards for all strata
   events = as.data.frame(as.matrix(fitme$y))
   for (strat in strat_list) {
     in_strat = which(strats == strat)
@@ -31,6 +34,7 @@ MGres <- function (fitme = NULL, data = NULL)
     basehaz = as.data.frame(cbind(rep(0, length = length(unique(events$stop))), unique(events$stop)))
     colnames(basehaz) = c('Haz', 'Time')
 
+    ### Distinguish models where 'start' time of risk interval is specified
     if (dim(events)[2] > 2) {
       eventtimes = events$stop
       for (i in 1:length(unique(events$stop))) {
@@ -54,6 +58,8 @@ MGres <- function (fitme = NULL, data = NULL)
         basehaz$Haz[i] = nom/denom
       }
     }
+
+    ### Compute individual cumulative hazards from baseline hazard and linear predictor
     for (i in 1:length(unique(data$subject))) {
       rows = which(data$subject == unique(data$subject)[i] &
                      strats == strat)
@@ -79,6 +85,8 @@ MGres <- function (fitme = NULL, data = NULL)
     count[i] = sum(events$status[set] == 1)
   }
   lambda = cumhaz * exp(individual_prop_haz)
+
+  ### Compute martingale residuals as `observed events` - `individual cumulative hazard` (lambda)
   resids = count - lambda
   names(resids) = unique(data$subject)
   return(resids)
@@ -164,7 +172,7 @@ LRM = function(obj.null,
   SNPs = colnames(Geno.mtx)
 
   #
-  ### ----------------- Quality Control ---------------
+  ### -------------- Quality Control ---------------
   #
 
   ### Only select genotypes that have a phenotype
@@ -185,11 +193,9 @@ LRM = function(obj.null,
   mresid = mresid[which(names(mresid) %in% Complete)]
   MG = mresid[match(rownames(G), names(mresid))]
 
-  #
   ### Perform Linear regression for all SNPs simultaneously using matrix multiplication
-  #
 
-  print(paste0("LRM-SPA started at ", Sys.time()))
+  print(paste0("LRM started at ", Sys.time()))
 
   ### Define outcome Y and intercept X
   n = dim(G)[1]
@@ -212,7 +218,7 @@ LRM = function(obj.null,
   b = as.numeric(b); error = as.numeric(error)
 
   outcome = cbind(SNP = colnames(G), MAF = colMeans(G)/2, Missing = colSums(is.na(G)),
-                  pSPA = pval.mg, pMG = pval.mg, Beta = b, SE = error, Z = abs(b / error))
+                  pSPA = pval.mg, pMG = pval.mg, Beta = b, SE = error, Z = b / error)
   outcome = as.data.frame(outcome, stringsAsFactors = F)
 
   outcome = transform(outcome, Beta = as.numeric(Beta), pMG = as.numeric(pMG), pSPA = as.numeric(pSPA),
@@ -250,7 +256,7 @@ LRM = function(obj.null,
     outcome$pSPA[i] = p_SPA
   }
 
-  print(paste0("LRM-SPA completed at ",Sys.time()))
+  print(paste0("LRM completed at ",Sys.time()))
 
   return(outcome)
 }
