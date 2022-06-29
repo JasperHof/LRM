@@ -5,7 +5,7 @@ In LRM, a linear regression on martingale residuals is applied to carry out a re
 The software can be downloaded in R by:
 ```
 library(devtools)
-install_github('JasperHof/LRM)
+install_github('JasperHof/LRM')
 library(LRM)
 ```
 
