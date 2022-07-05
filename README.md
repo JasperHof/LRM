@@ -9,4 +9,6 @@ install_github('JasperHof/LRM')
 library(LRM)
 ```
 
+The R package enables a GWAS for .bed and .bgen files using the functions 'LRM.bed' and 'LRM.bgen'. Information and examples for running the code can be found by running '?LRM.bed' and '?LRM.bgen'. 
+
 Please do not hesitate to contact me (Jasper.Hof@radboudumc.nl) in case you have any questions or if you encounter a problem in your analysis :-).
