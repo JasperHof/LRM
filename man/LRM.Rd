@@ -2,10 +2,10 @@
 \alias{LRM}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
- Linear regression on martingale residuals
+ Linear regression on Martingale residuals
 }
 \description{
-Carry out linear regression on martingale resduals based on input null model and genotype matrix
+Linear regression on martingale residuals based on input null model and genotype matrix
 }
 \usage{
 LRM(
@@ -19,10 +19,10 @@ LRM(
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{obj.null}{
-    an R object returned from 'Null_model()'.
+    an R object returned from 'Null_model()'
 }
   \item{Geno.mtx}{
-    Genotype matrix, with subjects IDs in row names and SNP names in column names.
+    Genotype matrix, with subjects IDs in row names and SNP names in column names
 }
   \item{missing.cutoff}{
   Cut-off rate for number of missing genotypes
@@ -48,7 +48,7 @@ The output file contains a matrix with the following columns
   Slope coefficient of the linear regression
 }
 \item{pMG}{
-  P value from linear regression on martingale residuals
+  P value from linear regression on martingale residuals without SPA correction
 }
 \item{pSPA}{
   P value from linear regression, corrected using a saddle-point approximation (recommended)

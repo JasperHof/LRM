@@ -10,6 +10,19 @@ library(seqminer)
 #
 #
 
+MGres_ph <- function (fitph = NULL, data = NULL)
+{
+  if(is.null(fitph)) stop('no coxph object included')
+  if(!'coxph' %in% class(fitph)) stop('object not of class coxph')
+  if(is.null(data)) stop('no data object included')
+  if(!'subject' %in% colnames(data)) stop('please include individuals as "subject" in dataframe')
+  if(length(grep('subject',attr(fitph$terms,'term.labels'))) < 1) warning('subject not included as frailty')
+
+  mgres = rowsum(fitph$residuals, data$subject)
+  mgres = mgres[match(unique(data$subject), rownames(mgres)),]
+  return(mgres)
+}
+
 MGres <- function (fitme = NULL, data = NULL)
 {
   MGres_check(fitme, data)
@@ -31,12 +44,12 @@ MGres <- function (fitme = NULL, data = NULL)
   for (strat in strat_list) {
     in_strat = which(strats == strat)
 
-    basehaz = as.data.frame(cbind(rep(0, length = length(unique(events$stop))), unique(events$stop)))
-    colnames(basehaz) = c('Haz', 'Time')
-
     ### Distinguish models where 'start' time of risk interval is specified
     if (dim(events)[2] > 2) {
+      basehaz = as.data.frame(cbind(rep(0, length = length(unique(events$stop))), unique(events$stop)))
+      colnames(basehaz) = c('Haz', 'Time')
       eventtimes = events$stop
+
       for (i in 1:length(unique(events$stop))) {
         time = basehaz$Time[i]
         risk.set = which(events$start < time & events$stop >=
@@ -47,8 +60,10 @@ MGres <- function (fitme = NULL, data = NULL)
         basehaz$Haz[i] = nom/denom
       }
     } else {
+      basehaz = as.data.frame(cbind(rep(0, length = length(unique(events$time))), unique(events$time)))
+      colnames(basehaz) = c('Haz', 'Time')
       eventtimes = events$time
-      for (i in 1:length(unique(events$stop))) {
+      for (i in 1:length(unique(events$time))) {
         time = basehaz$Time[i]
         risk.set = which(events$time >= time & strats ==
                            strat)
@@ -68,10 +83,10 @@ MGres <- function (fitme = NULL, data = NULL)
           if (dim(events)[2] > 2) {
             haz = sum(basehaz$Haz[which(events$start[rows[r]] <
                                           basehaz$Time & basehaz$Time <= events$stop[rows[r]])])
-            cumhaz[i] = cumhaz[i] + haz
+            cumhaz[i] = cumhaz[i] + haz * exp(fitme$linear.predictor[rows[r]])
           } else {
             haz = sum(basehaz$Haz[which(basehaz$Time <= events$time[rows[r]])])
-            cumhaz[i] = cumhaz[i] + haz
+            cumhaz[i] = cumhaz[i] + haz * exp(fitme$linear.predictor[rows[r]])
           }
         }
       }
@@ -79,15 +94,14 @@ MGres <- function (fitme = NULL, data = NULL)
   }
   individual_prop_haz = rep(0, length(unique(data$subject)))
   count = rep(0, length(unique(data$subject)))
+
   for (i in 1:length(unique(data$subject))) {
     set = which(data$subject == unique(data$subject)[i])
-    individual_prop_haz[i] = fitme$linear.predictor[set[1]]
     count[i] = sum(events$status[set] == 1)
   }
-  lambda = cumhaz * exp(individual_prop_haz)
 
   ### Compute martingale residuals as `observed events` - `individual cumulative hazard` (lambda)
-  resids = count - lambda
+  resids = count - cumhaz
   names(resids) = unique(data$subject)
   return(resids)
 }
@@ -97,16 +111,16 @@ MGres <- function (fitme = NULL, data = NULL)
 #
 
 Null_model <- function(fitme,
-                       data=NULL,
+                       data,
                        IDs=NULL,
                        range=c(-20,20),
-                       length.out = 50000,
-                       ...)
+                       length.out = 50000)
 {
   Call = match.call()
 
   ### Compute martingale residuals
-  mresid = MGres(fitme, data)
+  if('coxme' %in% class(fitme)) mresid = MGres(fitme, data)
+  if('coxph' %in% class(fitme)) mresid = MGres_ph(fitme, data)
 
   ### Check input arguments
   obj.check = check_input(data, IDs, mresid, range)
@@ -271,8 +285,10 @@ LRM.bgen <- function(bgenfile, gIDs,
                      chr = NULL,
                      missing.cutoff = 0.05,
                      min.maf = 0.05,
-                     p.cutoff = 0.001){
-
+                     p.cutoff = 0.001,
+                     memory = 512,
+                     maxchunksize = 5e4)
+{
 
   bgenfile = paste0(bgenfile, '.bgen')
   bgifile = paste0(bgenfile,'.bgi')
@@ -292,8 +308,12 @@ LRM.bgen <- function(bgenfile, gIDs,
 
   ### Set up chunk sizes
   size = dim(infos)[1]
-  matrixsize = 5e6
-  chunksize = floor(matrixsize/length(obj.null$resid))
+
+  bytes_per_genotype <- (3 * 8) + 4       # 3 values of 8 bytes, + 4 bytes for ploidy
+  bytes_per_variant = bytes_per_genotype * length(gIDs)
+  memory_available = memory * 1024^2
+  chunksize = floor(min(maxchunksize, memory_available/bytes_per_variant))
+
   reps = ceiling(size/chunksize)
   outcome = NULL
 
@@ -360,7 +380,10 @@ LRM.bed <- function(bedfile, gIDs,
                     chr = NULL,
                     missing.cutoff = 0.05,
                     min.maf = 0.05,
-                    p.cutoff = 0.001){
+                    p.cutoff = 0.001,
+                    memory = 512,
+                    maxchunksize = 5e4)
+{
 
 
   bim.file = paste0(bedfile, ".bim")
@@ -385,8 +408,12 @@ LRM.bed <- function(bedfile, gIDs,
   total.samples = intersect(obj.null$IDs, fam.data$V2)
 
   size = dim(bim.data)[1]
-  matrixsize = 5e6
-  chunksize = floor(matrixsize/length(total.samples))
+
+  bytes_per_genotype <- (3 * 8) + 4       # 3 values of 8 bytes, + 4 bytes for ploidy
+  bytes_per_variant = bytes_per_genotype * N
+  memory_available = memory * 1024^2
+  chunksize = floor(min(maxchunksize, memory_available/bytes_per_variant))
+
   reps = ceiling(size/chunksize)
   outcome = NULL
 
@@ -459,7 +486,7 @@ check_input = function(data, IDs, mresid, range)
     stop("range[2] should be -1*range[1]")
 
   if(length(mresid)!=length(IDs))
-    stop("length(mresid)!=length(pIDs) where mresid is the martingale residuals from coxme package.")
+    stop("length(mresid)!=length(IDs) where mresid are the martingale residuals.")
 
 }
 
@@ -543,5 +570,3 @@ na_mean = function (x, option = "mean", maxgap = Inf) {
     return(data)
   }
 }
-
-

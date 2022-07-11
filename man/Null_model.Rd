@@ -14,11 +14,12 @@ Null_model(
   IDs = NULL,
   range = c(-20,20),
   length.out = 50000
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{fitme}{
-    A 'coxme' object that is fitted for the null model. This object is obtained from the 'coxme' function.
+    A 'coxme' or 'coxph' object that is fitted for the null model. This object is obtained from the 'coxme' function of the coxme R package, or the 'coxph' function of the survival package.
 }
   \item{data}{
     The data frame that is used for fitting the coxme object.

@@ -2,10 +2,10 @@
 \alias{LRM.bed}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Linear regression on martingale residuals for .bed files.
+Linear Regression on Martingale residuals for .bed files
 }
 \description{
-Linear regression on martingale residuals for .bed files
+A fast and accurate method for a recurrent event GWAS
 }
 \usage{
 LRM.bed(
@@ -16,39 +16,48 @@ LRM.bed(
   chr = NULL,
   missing.cutoff = 0.05,
   min.maf = 0.05,
-  p.cutoff = 0.001)
+  p.cutoff = 0.001,
+  memory = 512,
+  maxchunksize = 5e4
+)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{bedfile}{
-    character, the name of the .bed file, without '.bed'.
+    character, the name of the .bed file, without the '.bed' extension
 }
   \item{gIDs}{
-    character vector of genotype IDs, in the same order as the .bgen file.
+    character vector of genotype IDs, in the same order as the .bgen file
 }
   \item{obj.null}{
-    an R object returned from 'Null_model()'.
+    an R object returned from 'Null_model()'
 }
   \item{output.file}{
-    character, the name of the output file for GWAS summary statistics.
+    character, the name of the output file for GWAS summary statistics
   }
   \item{chr}{
-  Chromosome number.
+  chromosome number
   }
   \item{missing.cutoff}{
-  Cut-off rate for number of missing genotypes.
+  cut-off rate for number of missing genotypes
   }
   \item{min.maf}{
-  Minimum minor allele frequency.
+  minimum minor allele frequency
   }
   \item{p.cutoff}{
-  Cut-off P value for implementing a saddle-point approximation.
+  cut-off P value for implementing a saddle-point approximation
+  }
+  \item{memory}{
+  memory of the device in MB, used to compute chunk size
+  }
+  \item{maxchunksize}{
+  maximum size of chunks of SNPs to be simultaneously analyzed in LRM
   }
 }
 \details{
-To run LRM for .bed files, the user should first fit a null model based on the phenotype data. This null model is used to compute martingale residuals, and their distribution is empirically estimated using a the saddle-point approximation.
+To run LRM for .bed files, the user should first fit a null model based on the phenotype data. This null model computes martingale residuals, and subsequently the distribution of martingale residuals is empirically estimated using a the saddle-point approximation.
 
-Subsequently, this function can be used to compute association statistics between SNPs in the .bed file and martingale residuals.
+After computing the null model, LRM.bed() computes association statistics between SNPs in the .bed file and martingale residuals.
 }
 \value{
 The output file contains a matrix with the following columns
@@ -59,7 +68,7 @@ The output file contains a matrix with the following columns
   Slope coefficient of the linear regression
 }
 \item{pMG}{
-  P value from linear regression on martingale residuals
+  P value from linear regression on martingale residuals without SPA correction
 }
 \item{pSPA}{
   P value from linear regression, corrected using a saddle-point approximation (recommended)
